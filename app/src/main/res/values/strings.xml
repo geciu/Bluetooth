@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Bluetooth Low Energy</string>
+    <string name="turn_on">Turn On</string>
+</resources>
