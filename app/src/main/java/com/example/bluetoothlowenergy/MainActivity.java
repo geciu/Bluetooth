@@ -129,4 +129,29 @@ public class MainActivity extends AppCompatActivity {
     private void showToast(String msg){
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
+    
+        public void addDevice(BluetoothDevice device, int rssi) {
+
+        String address = device.getAddress();
+        if (!mBTDevicesHashMap.containsKey(address)) {
+            BTLE_Device btleDevice = new BTLE_Device(device);
+            btleDevice.setRSSI(rssi);
+
+            mBTDevicesHashMap.put(address, btleDevice);
+            mBTDevicesArrayList.add(btleDevice);
+        }
+        else {
+            mBTDevicesHashMap.get(address).setRSSI(rssi);
+        }
+
+        adapter.notifyDataSetChanged();
+    }
+
+    public void startScan(){
+        btn_Scan.setText("Scanning...");
+
+        mBTDevicesArrayList.clear();
+        mBTDevicesHashMap.clear();
+
+        mBTLeScanner.start();
 }
