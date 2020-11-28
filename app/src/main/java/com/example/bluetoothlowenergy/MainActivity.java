@@ -144,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
             mBTDevicesHashMap.get(address).setRSSI(rssi);
         }
 
+            
         adapter.notifyDataSetChanged();
     }
 
@@ -153,5 +154,6 @@ public class MainActivity extends AppCompatActivity {
         mBTDevicesArrayList.clear();
         mBTDevicesHashMap.clear();
 
+        
         mBTLeScanner.start();
 }
