@@ -1,159 +1,72 @@
-package com.example.bluetoothlowenergy;
+package com.example.rssi;
 
-import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.content.Intent;
+import android.bluetooth.le.BluetoothLeAdvertiser;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanSettings;
+import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
 
-import java.util.Set;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final int REQUEST_ENABLE_BT = 0;
-    private static final int REQUEST_DISCOVER_BT = 1;
+    private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothLeScanner mBluetoothLeScanner;
+    private BluetoothLeAdvertiser mBluetoothLeAdvertiser;
+    private ScanFilter mScanFilter;
+    private ScanSettings mScanSettings;
+    private ScanCallback mScanCallback;
 
-    TextView mStatusBlueTv, mPairedTv;
-    ImageView mBlueIv;
-    Button mOnBtn, mOffBtn, mDiscoverBtn, mPairedBtn;
-
-    BluetoothAdapter mBlueAdapter;
-
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mStatusBlueTv = findViewById(R.id.statusBluetoothTv);
-        mPairedTv = findViewById(R.id.pairedTv);
-        mBlueIv = findViewById(R.id.bluetoothIv);
-        mOnBtn = findViewById(R.id.onBtn);
-        mOffBtn = findViewById(R.id.offBtn);
-        mDiscoverBtn = findViewById(R.id.discoverableBtn);
-        mPairedBtn = findViewById(R.id.pairedBtn);
-
-        mBlueAdapter = BluetoothAdapter.getDefaultAdapter();
-
-        if (mBlueAdapter == null) {
-            mStatusBlueTv.setText("Bluetooth jest niedostepny");
-        }
-        else {
-            mStatusBlueTv.setText("Bluetooth jest dostepny");
-        }
-
-        if (mBlueAdapter.isEnabled()){
-            mBlueIv.setImageResource(R.drawable.ic_action_on);
-        }
-        else{
-            mBlueIv.setImageResource(R.drawable.ic_action_off);
-        }
-
-        mOnBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(!mBlueAdapter.isEnabled()){
-                    showToast("Włączanie Bluetooth'a");
-                    Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                    startActivityForResult(intent, REQUEST_ENABLE_BT);
-                }
-                else {
-                showToast("Bluetooth jest włączony");
-                }
-            }
-        });
-
-        mDiscoverBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(!mBlueAdapter.isDiscovering()){
-                    showToast("Urządzenie jest widoczne");
-                    Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-                    startActivityForResult(intent, REQUEST_DISCOVER_BT);
-                }
-            }
-        });
-
-        mOffBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(mBlueAdapter.isEnabled()){
-                    mBlueAdapter.disable();
-                    mBlueIv.setImageResource(R.drawable.ic_action_off);
-                }
-                else{
-                    showToast("Bluetooth juz jest wyłączony");
-                }
-            }
-        });
-
-        mPairedBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(mBlueAdapter.isEnabled()){
-                    mPairedTv.setText("Połączono urządzenia");
-                    Set<BluetoothDevice> devices = mBlueAdapter.getBondedDevices();
-                    for(BluetoothDevice device: devices){
-                        mPairedTv.append("\nUrządzenie: " + device.getName() + "," + device);
-                    }
-                }
-                else{
-                    showToast("Włącz Bluetooth");
-                }
-            }
-        });
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+        mBluetoothLeAdvertiser = mBluetoothAdapter.getBluetoothLeAdvertiser();
+        mBluetoothLeScanner.startScan(Arrays.asList(mScanFilter), mScanSettings, mScanCallback);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        switch(requestCode){
-            case REQUEST_ENABLE_BT:
-            if(resultCode == RESULT_OK){
-                mBlueIv.setImageResource(R.drawable.ic_action_on);
-                showToast("Bluetooth jest włączony");
-            }
-            else{
-                showToast("Nie udało się połączyć");
-            }
-            break;
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void setScanFilter() {
+        ScanFilter.Builder mBuilder = new ScanFilter.Builder();
+        ByteBuffer mManufacturerData = ByteBuffer.allocate(23);
+        ByteBuffer mManufacturerDataMask = ByteBuffer.allocate(24);
+        byte[] uuid = getIdAsByte(UUID.fromString("0CF052C297CA407C84F8B62AAC4E9020"));
+        mManufacturerData.put(0, (byte)0xBE);
+        mManufacturerData.put(1, (byte)0xAC);
+        for (int i=2; i<=17; i++) {
+            mManufacturerData.put(i, uuid[i-2]);
         }
-        super.onActivityResult(requestCode, resultCode, data);
+        for (int i=0; i<=17; i++) {
+            mManufacturerDataMask.put((byte)0x01);
+        }
+        mBuilder.setManufacturerData(224, mManufacturerData.array(), mManufacturerDataMask.array());
+        mScanFilter = mBuilder.build();
     }
 
-    private void showToast(String msg){
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-    }
-    
-        public void addDevice(BluetoothDevice device, int rssi) {
-
-        String address = device.getAddress();
-        if (!mBTDevicesHashMap.containsKey(address)) {
-            BTLE_Device btleDevice = new BTLE_Device(device);
-            btleDevice.setRSSI(rssi);
-
-            mBTDevicesHashMap.put(address, btleDevice);
-            mBTDevicesArrayList.add(btleDevice);
-        }
-        else {
-            mBTDevicesHashMap.get(address).setRSSI(rssi);
-        }
-
-            
-        adapter.notifyDataSetChanged();
+    public static byte[] getIdAsByte(java.util.UUID uuid)
+    {
+        ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
+        bb.putLong(uuid.getMostSignificantBits());
+        bb.putLong(uuid.getLeastSignificantBits());
+        return bb.array();
     }
 
-    public void startScan(){
-        btn_Scan.setText("Scanning...");
-
-        mBTDevicesArrayList.clear();
-        mBTDevicesHashMap.clear();
-
-        
-        mBTLeScanner.start();
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void setScanSettings() {
+        ScanSettings.Builder mBuilder = new ScanSettings.Builder();
+        mBuilder.setReportDelay(0);
+        mBuilder.setScanMode(ScanSettings.SCAN_MODE_LOW_POWER);
+        mScanSettings = mBuilder.build();
+    }
 }
